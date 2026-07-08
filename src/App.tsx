@@ -1,6 +1,11 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { createExperience, fetchExperiences } from './lib/api';
-import type { Experience } from './types';
+import {
+  createExperience,
+  fetchCsrfToken,
+  fetchExperiences,
+  fetchSession,
+} from './lib/api';
+import type { AppSession, Experience } from './types';
 
 const EXPERIENCE_TYPES = [
   '학업',
@@ -34,10 +39,13 @@ function formatDate(value: string) {
 }
 
 export default function App() {
+  const [session, setSession] = useState<AppSession | null>(null);
+  const [csrfToken, setCsrfToken] = useState('');
   const [experienceType, setExperienceType] = useState('');
   const [content, setContent] = useState('');
   const [experiences, setExperiences] = useState<Experience[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSessionLoading, setIsSessionLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -45,7 +53,51 @@ export default function App() {
   useEffect(() => {
     let isMounted = true;
 
+    async function bootstrap() {
+      try {
+        const [sessionData, csrf] = await Promise.all([
+          fetchSession(),
+          fetchCsrfToken(),
+        ]);
+
+        if (isMounted) {
+          setSession(sessionData);
+          setCsrfToken(csrf);
+        }
+      } catch (bootstrapError) {
+        if (isMounted) {
+          setError(
+            bootstrapError instanceof Error
+              ? bootstrapError.message
+              : '로그인 기능을 초기화하지 못했습니다.'
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsSessionLoading(false);
+        }
+      }
+    }
+
+    void bootstrap();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
     async function loadExperiences() {
+      if (!session?.user.id) {
+        setExperiences([]);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+
       try {
         const rows = await fetchExperiences();
 
@@ -72,18 +124,26 @@ export default function App() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [session?.user.id]);
 
   const trimmedContent = content.trim();
   const contentTooShort =
     trimmedContent.length > 0 && trimmedContent.length < 10;
   const isDisabled =
-    isSubmitting || !experienceType.trim() || trimmedContent.length === 0;
+    isSubmitting ||
+    !session?.user.id ||
+    !experienceType.trim() ||
+    trimmedContent.length === 0;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
     setError('');
+
+    if (!session?.user.id) {
+      setError('로그인 후 경험을 저장할 수 있습니다.');
+      return;
+    }
 
     if (contentTooShort) {
       setError('경험 내용을 10자 이상 입력해주세요.');
@@ -116,8 +176,54 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f7f7f8] text-neutral-950">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-6 sm:px-8 lg:px-12">
-        <header className="border-b border-neutral-200 pb-6">
-          <div className="text-lg font-semibold tracking-tight">Compass</div>
+        <header className="flex items-center justify-between gap-4 border-b border-neutral-200 pb-6">
+          <div>
+            <div className="text-lg font-semibold tracking-tight">Compass</div>
+            <p className="mt-1 text-sm text-neutral-500">
+              로그인 후 사용자별 경험카드를 안전하게 기록합니다.
+            </p>
+          </div>
+
+          {isSessionLoading ? (
+            <div className="text-sm text-neutral-500">로그인 상태 확인 중...</div>
+          ) : session?.user ? (
+            <div className="flex items-center gap-3">
+              <div className="text-right text-sm">
+                <div className="font-medium text-neutral-900">
+                  {session.user.name || '로그인 사용자'}
+                </div>
+                <div className="text-neutral-500">{session.user.email}</div>
+              </div>
+              <form
+                method="post"
+                action="/api/auth/signout?callbackUrl=/"
+                className="shrink-0"
+              >
+                <input type="hidden" name="csrfToken" value={csrfToken} />
+                <button
+                  type="submit"
+                  className="rounded-2xl border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-900 transition hover:bg-neutral-100"
+                >
+                  로그아웃
+                </button>
+              </form>
+            </div>
+          ) : (
+            <form
+              method="post"
+              action="/api/auth/signin/google?callbackUrl=/"
+              className="shrink-0"
+            >
+              <input type="hidden" name="csrfToken" value={csrfToken} />
+              <button
+                type="submit"
+                disabled={!csrfToken}
+                className="rounded-2xl bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
+              >
+                Google로 로그인
+              </button>
+            </form>
+          )}
         </header>
 
         <main className="grid flex-1 gap-10 py-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:items-start">
@@ -138,6 +244,12 @@ export default function App() {
               onSubmit={handleSubmit}
             >
               <div className="space-y-6">
+                {!session?.user ? (
+                  <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-4 text-sm text-neutral-600">
+                    경험을 저장하려면 먼저 Google 로그인이 필요합니다.
+                  </div>
+                ) : null}
+
                 <div className="space-y-2">
                   <label
                     htmlFor="experienceType"
@@ -150,6 +262,7 @@ export default function App() {
                     className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-base outline-none transition focus:border-neutral-400"
                     value={experienceType}
                     onChange={(event) => setExperienceType(event.target.value)}
+                    disabled={!session?.user}
                   >
                     <option value="">경험 유형을 선택해주세요.</option>
                     {EXPERIENCE_TYPES.map((type) => (
@@ -174,6 +287,7 @@ export default function App() {
                     value={content}
                     onChange={(event) => setContent(event.target.value)}
                     maxLength={10000}
+                    disabled={!session?.user}
                   />
                   <div className="flex items-center justify-between text-sm text-neutral-500">
                     <span>
@@ -210,7 +324,11 @@ export default function App() {
               </h2>
             </div>
 
-            {isLoading ? (
+            {!session?.user ? (
+              <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 px-4 py-6 text-sm text-neutral-500">
+                로그인하면 사용자별 최근 경험이 여기에 표시됩니다.
+              </div>
+            ) : isLoading ? (
               <p className="text-sm text-neutral-500">경험 목록을 불러오는 중입니다.</p>
             ) : experiences.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 px-4 py-6 text-sm text-neutral-500">

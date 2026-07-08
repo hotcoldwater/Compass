@@ -1,4 +1,8 @@
-import type { CreateExperienceInput, Experience } from '../types';
+import type {
+  AppSession,
+  CreateExperienceInput,
+  Experience,
+} from '../types';
 
 type ExperienceListResponse = {
   ok: boolean;
@@ -12,6 +16,10 @@ type ExperienceCreateResponse = {
   error?: string;
 };
 
+type CsrfResponse = {
+  csrfToken?: string;
+};
+
 export async function fetchExperiences(): Promise<Experience[]> {
   const res = await fetch('/api/experiences');
   const data = (await res.json()) as ExperienceListResponse;
@@ -21,6 +29,38 @@ export async function fetchExperiences(): Promise<Experience[]> {
   }
 
   return data.experiences;
+}
+
+export async function fetchSession(): Promise<AppSession | null> {
+  const res = await fetch('/api/auth/session', {
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    throw new Error('로그인 상태를 확인하지 못했습니다.');
+  }
+
+  const data = (await res.json()) as AppSession | null;
+
+  return data;
+}
+
+export async function fetchCsrfToken(): Promise<string> {
+  const res = await fetch('/api/auth/csrf', {
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    throw new Error('로그인 보안 토큰을 불러오지 못했습니다.');
+  }
+
+  const data = (await res.json()) as CsrfResponse;
+
+  if (!data.csrfToken) {
+    throw new Error('로그인 보안 토큰이 비어 있습니다.');
+  }
+
+  return data.csrfToken;
 }
 
 export async function createExperience(

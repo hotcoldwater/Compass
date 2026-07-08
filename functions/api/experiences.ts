@@ -1,8 +1,8 @@
 import { neon } from '@neondatabase/serverless';
-
-type Env = {
-  DATABASE_URL: string;
-};
+import {
+  getAuthenticatedUser,
+  type AuthEnv,
+} from '../_lib/auth';
 
 type ExperienceRow = {
   id: number;
@@ -20,15 +20,7 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'unknown error';
-}
-
-export const onRequestGet: PagesFunction<Env> = async (context) => {
+export const onRequestGet: PagesFunction<AuthEnv> = async (context) => {
   try {
     if (!context.env.DATABASE_URL) {
       return jsonResponse(
@@ -40,14 +32,27 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       );
     }
 
+    const user = await getAuthenticatedUser(context.request, context.env);
+
+    if (!user) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: '로그인이 필요합니다.',
+        },
+        401
+      );
+    }
+
     const sql = neon(context.env.DATABASE_URL);
 
-    const rows = await sql<ExperienceRow[]>`
+    const rows = (await sql`
       SELECT id, experience_type, content, created_at
       FROM experiences
+      WHERE user_id = ${user.id}
       ORDER BY created_at DESC, id DESC
       LIMIT 20
-    `;
+    `) as ExperienceRow[];
 
     return jsonResponse({
       ok: true,
@@ -59,14 +64,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return jsonResponse(
       {
         ok: false,
-        error: `경험 목록을 불러오지 못했습니다. (${getErrorMessage(error)})`,
+        error: '경험 목록을 불러오지 못했습니다.',
       },
       500
     );
   }
 };
 
-export const onRequestPost: PagesFunction<Env> = async (context) => {
+export const onRequestPost: PagesFunction<AuthEnv> = async (context) => {
   try {
     if (!context.env.DATABASE_URL) {
       return jsonResponse(
@@ -75,6 +80,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           error: 'DATABASE_URL 환경변수가 설정되지 않았습니다.',
         },
         500
+      );
+    }
+
+    const user = await getAuthenticatedUser(context.request, context.env);
+
+    if (!user) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: '로그인이 필요합니다.',
+        },
+        401
       );
     }
 
@@ -123,11 +140,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
-    const rows = await sql<ExperienceRow[]>`
-      INSERT INTO experiences (experience_type, content)
-      VALUES (${experienceType}, ${content})
+    const rows = (await sql`
+      INSERT INTO experiences (user_id, experience_type, content)
+      VALUES (${user.id}, ${experienceType}, ${content})
       RETURNING id, experience_type, content, created_at
-    `;
+    `) as ExperienceRow[];
 
     return jsonResponse({
       ok: true,
@@ -139,7 +156,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return jsonResponse(
       {
         ok: false,
-        error: `경험 저장 중 문제가 발생했습니다. (${getErrorMessage(error)})`,
+        error: '경험 저장 중 문제가 발생했습니다.',
       },
       500
     );

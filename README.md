@@ -4,10 +4,11 @@
 
 ## 기능
 
+- Google 로그인
 - 경험 유형 선택
 - 경험 내용 작성
 - 경험 저장
-- 최근 경험 목록 조회
+- 로그인 사용자별 최근 경험 목록 조회
 
 ## 기술 스택
 
@@ -15,6 +16,7 @@
 - Vite
 - TypeScript
 - Tailwind CSS
+- Auth.js
 - Cloudflare Pages
 - Cloudflare Pages Functions
 - Neon DB
@@ -30,19 +32,13 @@ npm run dev
 
 ## DB 설정
 
-Neon DB에서 `schema.sql`의 SQL을 실행합니다. Neon SQL Editor 또는 PostgreSQL 클라이언트에서 적용할 수 있습니다.
+Neon DB에서 `schema.sql`의 SQL을 실행합니다. Neon SQL Editor 또는 PostgreSQL 클라이언트에서 적용할 수 있습니다. 로그인 기능을 위해 Auth.js용 `users`, `accounts`, `sessions`, `verification_token` 테이블과 `experiences.user_id` 컬럼이 함께 생성됩니다.
 
 ```sql
-CREATE TABLE IF NOT EXISTS experiences (
-  id SERIAL PRIMARY KEY,
-  experience_type TEXT NOT NULL,
-  content TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- schema.sql 전체 실행
 ```
 
-현재 MVP에는 로그인 기능이 없으므로 `user_id` 컬럼은 포함하지 않습니다. 추후 로그인 기능을 붙일 경우 `user_id` 컬럼을 추가해 사용자별 경험 관리로 확장할 수 있습니다.
+기존에 로그인 없이 저장한 데이터가 있다면 `user_id`가 비어 있을 수 있습니다. 로그인 기능 이후 저장되는 경험은 로그인한 사용자 기준으로 분리됩니다.
 
 ## 환경변수
 
@@ -50,9 +46,22 @@ CREATE TABLE IF NOT EXISTS experiences (
 
 ```env
 DATABASE_URL=postgresql://USER:PASSWORD@HOST/dbname?sslmode=require
+AUTH_SECRET=replace-with-a-random-secret
+AUTH_GOOGLE_ID=replace-with-google-client-id
+AUTH_GOOGLE_SECRET=replace-with-google-client-secret
 ```
 
-Cloudflare Pages 배포 시에는 Cloudflare 대시보드의 환경변수에 `DATABASE_URL`을 등록해야 합니다. 필요하면 Production/Preview 환경을 나누어 설정할 수 있습니다.
+Cloudflare Pages 배포 시에는 Cloudflare 대시보드 환경변수에 아래 값을 등록해야 합니다.
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `AUTH_GOOGLE_ID`
+- `AUTH_GOOGLE_SECRET`
+
+Google OAuth 콘솔에는 아래 주소를 등록합니다.
+
+- Authorized JavaScript origin: `https://compass-bsc.pages.dev`
+- Authorized redirect URI: `https://compass-bsc.pages.dev/api/auth/callback/google`
 
 ## 배포
 
