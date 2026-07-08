@@ -1,0 +1,8 @@
+.env
+.env.local
+.dev.vars
+node_modules
+dist
+.wrangler
+.DS_Store
+Pretendard-1.3.9/
