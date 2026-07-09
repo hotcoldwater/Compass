@@ -21,6 +21,10 @@ const EXPERIENCE_TYPES = [
   '개인사업/창업/사이드프로젝트',
 ] as const;
 
+const PRIMARY_SECTIONS = ['새 자소서', '경험 기록', '일정'] as const;
+
+type PrimarySection = (typeof PRIMARY_SECTIONS)[number];
+
 function formatDate(value: string) {
   const date = new Date(value);
 
@@ -42,7 +46,22 @@ function truncatePreview(value: string) {
   return value.length > 84 ? `${value.slice(0, 84)}...` : value;
 }
 
+function EmptyPanel({ title }: { title: string }) {
+  return (
+    <section className="rounded-[32px] border border-white/70 bg-[#f7f7f8] shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+      <header className="border-b border-neutral-200/80 px-6 py-6 sm:px-8">
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          {title}
+        </h1>
+      </header>
+      <div className="min-h-[560px] px-6 py-6 sm:px-8 sm:py-8" />
+    </section>
+  );
+}
+
 export default function App() {
+  const [activeSection, setActiveSection] =
+    useState<PrimarySection>('경험 기록');
   const [session, setSession] = useState<AppSession | null>(null);
   const [csrfToken, setCsrfToken] = useState('');
   const [experienceType, setExperienceType] = useState('');
@@ -165,7 +184,7 @@ export default function App() {
       setExperiences((prev) => [savedExperience, ...prev].slice(0, 20));
       setExperienceType('');
       setContent('');
-      setMessage('경험이 저장되었습니다.');
+      setMessage('저장되었습니다.');
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -175,6 +194,139 @@ export default function App() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function renderExperienceSection() {
+    return (
+      <section className="rounded-[32px] border border-white/70 bg-[#f7f7f8] shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+        <header className="border-b border-neutral-200/80 px-6 py-6 sm:px-8">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            경험 기록
+          </h1>
+        </header>
+
+        <div className="grid gap-6 px-6 py-6 sm:px-8 sm:py-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <form
+            className="rounded-[28px] border border-neutral-200 bg-white p-5 shadow-sm sm:p-6"
+            onSubmit={handleSubmit}
+          >
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label
+                  htmlFor="experienceType"
+                  className="text-sm font-medium text-neutral-700"
+                >
+                  경험 유형
+                </label>
+                <select
+                  id="experienceType"
+                  className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-base outline-none transition focus:border-neutral-400"
+                  value={experienceType}
+                  onChange={(event) => setExperienceType(event.target.value)}
+                  disabled={!session?.user}
+                >
+                  <option value="">선택</option>
+                  {EXPERIENCE_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="content"
+                  className="text-sm font-medium text-neutral-700"
+                >
+                  내용
+                </label>
+                <textarea
+                  id="content"
+                  className="min-h-[360px] w-full resize-y rounded-[28px] border border-neutral-200 bg-white px-5 py-5 text-base leading-8 outline-none transition focus:border-neutral-400"
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                  maxLength={10000}
+                  disabled={!session?.user}
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-neutral-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  {message ? (
+                    <p className="text-sm text-neutral-700">{message}</p>
+                  ) : null}
+                  {error ? (
+                    <p className="text-sm text-red-600">{error}</p>
+                  ) : null}
+                  {!message && !error && contentTooShort ? (
+                    <p className="text-sm text-neutral-500">
+                      10자 이상 입력해주세요.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-neutral-500">
+                    {trimmedContent.length}/10000
+                  </span>
+                  <button
+                    type="submit"
+                    className="inline-flex min-w-[140px] items-center justify-center rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
+                    disabled={isDisabled}
+                  >
+                    {isSubmitting ? '저장 중...' : '저장'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <section className="rounded-[28px] border border-neutral-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 text-sm font-medium text-neutral-700">
+              기록 목록
+            </div>
+
+            {!session?.user ? null : isLoading ? (
+              <div className="rounded-2xl border border-neutral-200 px-4 py-4 text-sm text-neutral-500">
+                불러오는 중...
+              </div>
+            ) : experiences.length === 0 ? null : (
+              <div className="space-y-2">
+                {experiences.map((experience) => (
+                  <article
+                    key={experience.id}
+                    className="rounded-3xl border border-neutral-200 px-4 py-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-medium text-neutral-950">
+                        {experience.experience_type}
+                      </div>
+                      <div className="text-[11px] text-neutral-500">
+                        {formatDate(experience.created_at)}
+                      </div>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-neutral-500">
+                      {truncatePreview(
+                        experience.content.replace(/\s+/g, ' ').trim()
+                      )}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </section>
+    );
+  }
+
+  function renderMainContent() {
+    if (activeSection === '경험 기록') {
+      return renderExperienceSection();
+    }
+
+    return <EmptyPanel title={activeSection} />;
   }
 
   return (
@@ -190,87 +342,47 @@ export default function App() {
                   className="h-10 w-10 rounded-xl"
                 />
               </div>
-              <div>
-                <div className="text-lg font-semibold tracking-tight">Compass</div>
-                <div className="text-xs text-neutral-400">
-                  Experience workspace
-                </div>
-              </div>
+              <div className="text-lg font-semibold tracking-tight">Compass</div>
             </div>
           </div>
 
-          <div className="space-y-5 px-5 py-5">
-            <button
-              type="button"
-              onClick={() => {
-                setExperienceType('');
-                setContent('');
-                setMessage('');
-                setError('');
-              }}
-              className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm font-medium text-white transition hover:bg-white/10"
-            >
-              <span>새 경험 기록</span>
-              <span className="text-neutral-500">+</span>
-            </button>
-
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-              <div className="text-xs uppercase tracking-[0.24em] text-neutral-500">
-                Workspace
+          <div className="flex-1 overflow-y-auto px-3 py-5">
+            <section>
+              <div className="mb-3 px-2 text-xs uppercase tracking-[0.24em] text-neutral-500">
+                Menu
               </div>
-              <div className="mt-3 text-2xl font-semibold text-white">
-                {session?.user ? `${experiences.length}개의 카드` : '로그인 필요'}
-              </div>
-              <p className="mt-2 text-sm leading-6 text-neutral-400">
-                경험을 기록할수록 자소서 재료가 쌓입니다. 사이드바에서 최근 카드를
-                빠르게 훑고, 오른쪽에서 새 경험을 정리하세요.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-3 pb-4">
-            <div className="mb-3 px-2 text-xs uppercase tracking-[0.24em] text-neutral-500">
-              Recent Cards
-            </div>
-
-            {!session?.user ? (
-              <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-5 text-sm leading-6 text-neutral-400">
-                로그인 후 사용자별 경험 카드가 이 사이드바에 쌓입니다.
-              </div>
-            ) : isLoading ? (
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] px-4 py-5 text-sm text-neutral-400">
-                최근 경험을 불러오는 중입니다.
-              </div>
-            ) : experiences.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-5 text-sm leading-6 text-neutral-400">
-                아직 저장된 경험이 없습니다.
-                <br />
-                첫 번째 경험 카드를 만들어보세요.
-              </div>
-            ) : (
               <div className="space-y-2">
-                {experiences.map((experience) => (
-                  <article
-                    key={experience.id}
-                    className="rounded-3xl border border-white/10 bg-white/[0.04] px-4 py-4 transition hover:bg-white/[0.08]"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm font-medium text-white">
-                        {experience.experience_type}
-                      </div>
-                      <div className="text-[11px] text-neutral-500">
-                        {formatDate(experience.created_at)}
-                      </div>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-neutral-400">
-                      {truncatePreview(
-                        experience.content.replace(/\s+/g, ' ').trim()
-                      )}
-                    </p>
-                  </article>
-                ))}
+                {PRIMARY_SECTIONS.map((section) => {
+                  const isActive = activeSection === section;
+
+                  return (
+                    <button
+                      key={section}
+                      type="button"
+                      onClick={() => {
+                        setActiveSection(section);
+                        setMessage('');
+                        setError('');
+                      }}
+                      className={`flex w-full items-center rounded-2xl px-4 py-3 text-left text-sm font-medium transition ${
+                        isActive
+                          ? 'bg-white text-neutral-950'
+                          : 'bg-white/[0.04] text-white hover:bg-white/[0.08]'
+                      }`}
+                    >
+                      {section}
+                    </button>
+                  );
+                })}
               </div>
-            )}
+            </section>
+
+            <section className="mt-6">
+              <div className="mb-3 px-2 text-xs uppercase tracking-[0.24em] text-neutral-500">
+                자소서 작성한거
+              </div>
+              <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-5" />
+            </section>
           </div>
 
           <div className="border-t border-neutral-800 px-5 py-4">
@@ -315,164 +427,8 @@ export default function App() {
         </aside>
 
         <main className="flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
-          <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col">
-            <div className="rounded-[32px] border border-white/70 bg-[#f7f7f8] shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-              <div className="border-b border-neutral-200/80 px-6 py-6 sm:px-8">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                  <div className="max-w-3xl space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-neutral-200 bg-white shadow-sm">
-                        <img
-                          src="/compass-logo.svg"
-                          alt="Compass logo"
-                          className="h-8 w-8 rounded-lg"
-                        />
-                      </div>
-                      <span className="text-sm font-medium uppercase tracking-[0.28em] text-neutral-500">
-                        Compass Workspace
-                      </span>
-                    </div>
-                    <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-                      나의 경험 기록하기
-                    </h1>
-                    <p className="max-w-2xl text-base leading-7 text-neutral-500">
-                      ChatGPT처럼 한 곳에서 아이디어를 쌓고, 사이드바에서 저장된
-                      경험 카드를 빠르게 확인하세요. 정리되지 않은 문장이어도
-                      괜찮습니다.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2 lg:w-[330px]">
-                    <div className="rounded-3xl border border-neutral-200 bg-white px-4 py-4">
-                      <div className="text-xs uppercase tracking-[0.24em] text-neutral-500">
-                        상태
-                      </div>
-                      <div className="mt-3 text-sm font-medium text-neutral-950">
-                        {session?.user ? '로그인됨' : '게스트'}
-                      </div>
-                      <div className="mt-1 text-sm text-neutral-500">
-                        {session?.user
-                          ? '사용자별 경험카드 저장 가능'
-                          : '로그인 후 사용자별 저장 가능'}
-                      </div>
-                    </div>
-
-                    <div className="rounded-3xl border border-neutral-200 bg-white px-4 py-4">
-                      <div className="text-xs uppercase tracking-[0.24em] text-neutral-500">
-                        최근 카드
-                      </div>
-                      <div className="mt-3 text-sm font-medium text-neutral-950">
-                        {experiences.length}개
-                      </div>
-                      <div className="mt-1 text-sm text-neutral-500">
-                        최신순으로 사이드바에서 확인
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-6 py-6 sm:px-8 sm:py-8">
-                <form
-                  className="rounded-[28px] border border-neutral-200 bg-white p-5 shadow-sm sm:p-6"
-                  onSubmit={handleSubmit}
-                >
-                  <div className="space-y-6">
-                    {!session?.user ? (
-                      <div className="rounded-3xl border border-neutral-200 bg-neutral-50 px-4 py-4 text-sm leading-6 text-neutral-600">
-                        경험을 저장하려면 먼저 Google 로그인이 필요합니다. 로그인 후
-                        작성한 경험은 사용자별 카드로 분리되어 저장됩니다.
-                      </div>
-                    ) : null}
-
-                    <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="experienceType"
-                          className="text-sm font-medium text-neutral-700"
-                        >
-                          경험 유형 선택
-                        </label>
-                        <select
-                          id="experienceType"
-                          className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-base outline-none transition focus:border-neutral-400"
-                          value={experienceType}
-                          onChange={(event) =>
-                            setExperienceType(event.target.value)
-                          }
-                          disabled={!session?.user}
-                        >
-                          <option value="">경험 유형을 선택해주세요.</option>
-                          {EXPERIENCE_TYPES.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="rounded-3xl border border-neutral-200 bg-neutral-50 px-4 py-4 text-sm leading-6 text-neutral-600">
-                        어떤 일을 했는지, 어디서 어려움이 있었는지, 어떻게 풀었는지,
-                        무엇을 느꼈는지를 한 흐름으로 적으면 나중에 카드 재정리에
-                        훨씬 유리합니다.
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="content"
-                        className="text-sm font-medium text-neutral-700"
-                      >
-                        구체적인 경험 내용 작성
-                      </label>
-                      <textarea
-                        id="content"
-                        className="min-h-[360px] w-full resize-y rounded-[28px] border border-neutral-200 bg-white px-5 py-5 text-base leading-8 outline-none transition placeholder:text-neutral-400 focus:border-neutral-400"
-                        placeholder={`이 경험에서 어떤 일을 했고, 어떤 문제가 있었고, 무엇을 느꼈는지 자유롭게 작성해주세요.\n예: CPA 공부를 하면서 회계감사 과목의 비효율을 느꼈고...`}
-                        value={content}
-                        onChange={(event) => setContent(event.target.value)}
-                        maxLength={10000}
-                        disabled={!session?.user}
-                      />
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <span className="text-sm text-neutral-500">
-                          {contentTooShort
-                            ? '경험 내용을 10자 이상 입력해주세요.'
-                            : '짧은 메모처럼 시작해도 됩니다. 나중에 카드형으로 다시 정리할 수 있습니다.'}
-                        </span>
-                        <span className="text-sm text-neutral-500">
-                          {trimmedContent.length}/10000
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3 border-t border-neutral-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="space-y-1">
-                        {message ? (
-                          <p className="text-sm text-neutral-700">{message}</p>
-                        ) : (
-                          <p className="text-sm text-neutral-500">
-                            사이드바에 카드가 쌓이면 최근 경험을 빠르게 탐색할 수
-                            있습니다.
-                          </p>
-                        )}
-                        {error ? (
-                          <p className="text-sm text-red-600">{error}</p>
-                        ) : null}
-                      </div>
-
-                      <button
-                        type="submit"
-                        className="inline-flex min-w-[140px] items-center justify-center rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
-                        disabled={isDisabled}
-                      >
-                        {isSubmitting ? '저장 중...' : '저장하기'}
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-            </div>
+          <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col">
+            {renderMainContent()}
           </div>
         </main>
       </div>
