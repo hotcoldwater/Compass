@@ -16,7 +16,7 @@ import type {
   ResumePayloadQuestion,
   ResumeRecord,
 } from './types';
-import { ExperienceArchive } from './features/experience-cards/ExperienceArchive';
+import { SimpleExperience } from './features/experience-cards/SimpleExperience';
 import { ResumeExperienceLinks } from './features/resumes/ResumeExperienceLinks';
 import { AiAnswerGenerator } from './features/resumes/AiAnswerGenerator';
 
@@ -783,17 +783,24 @@ export default function App() {
                   ? `${currentLength}`
                   : `${currentLength} / ${limitValue || 0}${limitLabel}`}
               </div>
-              <ResumeExperienceLinks
-                questionId={question.id}
-                disabled={!session?.user.id}
-              />
-              <AiAnswerGenerator
-                questionId={question.id}
-                disabled={!session?.user.id}
-                onApply={(answer) =>
-                  updateQuestion(question.client_id, 'answer_content', answer)
-                }
-              />
+              <details className="mt-4 rounded-xl bg-neutral-50 p-3">
+                <summary className="cursor-pointer text-sm font-medium text-neutral-700">
+                  경험 선택과 AI 작성
+                </summary>
+                <div className="mt-3">
+                  <ResumeExperienceLinks
+                    questionId={question.id}
+                    disabled={!session?.user.id}
+                  />
+                  <AiAnswerGenerator
+                    questionId={question.id}
+                    disabled={!session?.user.id}
+                    onApply={(answer) =>
+                      updateQuestion(question.client_id, 'answer_content', answer)
+                    }
+                  />
+                </div>
+              </details>
             </article>
           );
         })}
@@ -823,9 +830,28 @@ export default function App() {
 
   function renderResumeSection() {
     return (
-      <section className="rounded-[32px] border border-white/70 bg-[#f7f7f8] shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
+      <section className="mx-auto max-w-5xl">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight">자소서</h1>
+            <p className="mt-2 text-sm text-neutral-500">경험을 고르고, 필요한 문항만 작성하세요.</p>
+          </div>
+          <button type="button" onClick={openNewResume} className="rounded-xl bg-neutral-950 px-4 py-3 text-sm font-medium text-white">+ 새 자소서</button>
+        </div>
+        {resumeRecords.length > 0 ? (
+          <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
+            {resumeRecords.map((record) => (
+              <button key={record.id} type="button" onClick={() => openResumeRecord(record)} className={`min-w-56 rounded-2xl border p-4 text-left ${resumeDraft.id === record.id ? 'border-neutral-950 bg-neutral-950 text-white' : 'border-neutral-200 bg-white text-neutral-900'}`}>
+                <div className="text-sm font-medium">{getResumeTitle(record)}</div>
+                <div className={`mt-2 text-xs ${resumeDraft.id === record.id ? 'text-neutral-300' : 'text-neutral-500'}`}>마지막 수정 {formatDate(record.updated_at)}</div>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <div className="overflow-hidden rounded-3xl border border-neutral-200 bg-[#f7f7f8] shadow-sm">
         {renderResumeStepNavigation()}
         {activeStep === 1 ? renderResumeBasicInfo() : renderResumeWriting()}
+        </div>
       </section>
     );
   }
@@ -979,15 +1005,29 @@ export default function App() {
 
   function renderMainContent() {
     if (activeSection === '경험 아카이브') {
-      return <ExperienceArchive enabled={Boolean(session?.user.id)} />;
-    }
-
-    if (activeSection === '일정') {
-      return renderCalendarSection();
+      return <SimpleExperience enabled={Boolean(session?.user.id)} />;
     }
 
     return renderResumeSection();
   }
+
+  return (
+    <div className="min-h-screen bg-[#fafafa] text-neutral-950">
+      <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
+          <button type="button" onClick={() => setActiveSection('경험 아카이브')} className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <img src="/compass-logo.svg" alt="Compass" className="h-8 w-8 rounded-lg" /> Compass
+          </button>
+          <nav className="flex items-center gap-1 rounded-xl bg-neutral-100 p-1">
+            <button type="button" onClick={() => setActiveSection('경험 아카이브')} className={`rounded-lg px-4 py-2 text-sm font-medium ${activeSection === '경험 아카이브' ? 'bg-white shadow-sm' : 'text-neutral-500'}`}>경험</button>
+            <button type="button" onClick={() => setActiveSection('새 자소서')} className={`rounded-lg px-4 py-2 text-sm font-medium ${activeSection === '새 자소서' ? 'bg-white shadow-sm' : 'text-neutral-500'}`}>자소서</button>
+          </nav>
+          {isSessionLoading ? <span className="text-xs text-neutral-400">불러오는 중</span> : session?.user ? <form method="post" action="/api/auth/signout?callbackUrl=/" className="hidden sm:block"><input type="hidden" name="csrfToken" value={csrfToken}/><button className="text-sm text-neutral-500">로그아웃</button></form> : <form method="post" action="/api/auth/signin/google?callbackUrl=/"><input type="hidden" name="csrfToken" value={csrfToken}/><button disabled={!csrfToken} className="rounded-xl bg-neutral-950 px-3 py-2 text-xs font-medium text-white disabled:bg-neutral-300">로그인</button></form>}
+        </div>
+      </header>
+      <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8">{renderMainContent()}</main>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#ececec] text-neutral-950">
@@ -1089,10 +1129,10 @@ export default function App() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium text-white">
-                    {session.user.name || '로그인 사용자'}
+                    {session?.user?.name || '로그인 사용자'}
                   </div>
                   <div className="truncate text-xs text-neutral-500">
-                    {session.user.email}
+                    {session?.user?.email}
                   </div>
                 </div>
                 <form method="post" action="/api/auth/signout?callbackUrl=/">
