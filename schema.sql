@@ -146,6 +146,18 @@ CREATE TABLE IF NOT EXISTS resume_question_experience_links (
 CREATE INDEX IF NOT EXISTS resume_question_experience_links_question_idx
   ON resume_question_experience_links (resume_question_id, link_order, id);
 
+CREATE TABLE IF NOT EXISTS resume_answer_versions (
+  id SERIAL PRIMARY KEY,
+  resume_question_id INTEGER NOT NULL REFERENCES resume_questions(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'manual',
+  generation_metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (resume_question_id, version_number),
+  CONSTRAINT resume_answer_versions_source_check CHECK (source IN ('manual', 'ai_generated', 'ai_revised'))
+);
+
 INSERT INTO experience_cards (user_id, legacy_experience_id, category, title, raw_note, status, created_at, updated_at)
 SELECT user_id, id, experience_type, LEFT(REGEXP_REPLACE(content, E'[\\n\\r]+', ' ', 'g'), 60), content, 'memo', created_at, updated_at
 FROM experiences WHERE user_id IS NOT NULL

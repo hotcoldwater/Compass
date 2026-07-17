@@ -18,6 +18,7 @@ import type {
 } from './types';
 import { ExperienceArchive } from './features/experience-cards/ExperienceArchive';
 import { ResumeExperienceLinks } from './features/resumes/ResumeExperienceLinks';
+import { AiAnswerGenerator } from './features/resumes/AiAnswerGenerator';
 
 const EXPERIENCE_TYPES = [
   '학업',
@@ -785,6 +786,13 @@ export default function App() {
               <ResumeExperienceLinks
                 questionId={question.id}
                 disabled={!session?.user.id}
+              />
+              <AiAnswerGenerator
+                questionId={question.id}
+                disabled={!session?.user.id}
+                onApply={(answer) =>
+                  updateQuestion(question.client_id, 'answer_content', answer)
+                }
               />
             </article>
           );
