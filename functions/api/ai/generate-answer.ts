@@ -39,7 +39,7 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
     if (!context.ok) return cardJson({ ok: false, error: context.error }, context.status);
     const { question, facts, confirmedMetrics, primaryExperienceCardId } = context.data;
 
-    const generation = await generateAnswer(env, {
+    const baseInput = {
       companyName: question.company_name || '',
       jobField: question.job_field || '',
       question: question.question_text,
@@ -49,11 +49,28 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
       outline: outline || undefined,
       companyInfo: companyInfo || question.company_info || undefined,
       additionalDetails: followups.length ? followups : undefined,
+    };
+
+    let generation = await generateAnswer(env, {
+      ...baseInput,
       instructions: { tone: 'professional', structure: 'conclusion_first' },
     });
     if (!generation.answer) return cardJson({ ok: false, error: 'AI가 초안을 만들지 못했습니다.' }, 500);
 
-    const count = question.limit_type === 'bytes' ? bytes(generation.answer) : generation.answer.length;
+    const target = Number(question.limit_value);
+    const measure = (text: string) => (question.limit_type === 'bytes' ? bytes(text) : text.length);
+    if (question.limit_type !== 'none' && target > 0 && measure(generation.answer) < target * 0.85) {
+      const expanded = await generateAnswer(env, {
+        ...baseInput,
+        instructions: { tone: 'professional', structure: 'conclusion_first', mode: 'expand', targetLength: target, targetUnit: question.limit_type },
+        previousAnswer: generation.answer,
+      }).catch(() => null);
+      if (expanded?.answer && measure(expanded.answer) > measure(generation.answer) && measure(expanded.answer) <= target) {
+        generation = expanded;
+      }
+    }
+
+    const count = measure(generation.answer);
     const versions = await sql`SELECT COALESCE(MAX(version_number), 0)::int AS latest FROM resume_answer_versions WHERE resume_question_id=${questionId}`;
     const versionNumber = Number((versions[0] as { latest: number }).latest) + 1;
     const inserted = await sql`INSERT INTO resume_answer_versions (resume_question_id,version_number,content,source,generation_metadata) VALUES (${questionId},${versionNumber},${generation.answer},'ai_generated',${JSON.stringify({ usedFacts: generation.usedFacts, warnings: generation.warnings, outline, followups })}::jsonb) RETURNING id`;
