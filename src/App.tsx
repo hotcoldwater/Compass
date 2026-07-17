@@ -36,8 +36,8 @@ const EXPERIENCE_TYPES = [
 
 const PRIMARY_SECTIONS = ['새 자소서', '경험 아카이브', '일정'] as const;
 const STEP_ITEMS = [
-  { id: 1, label: '기본정보 입력' },
-  { id: 2, label: '자소서 작성' },
+  { id: 1, label: '회사와 문항' },
+  { id: 2, label: '답변 작성' },
 ] as const;
 const LIMIT_OPTIONS: Array<{ value: ResumeLimitType; label: string }> = [
   { value: 'chars', label: '글자수' },
@@ -225,7 +225,7 @@ function getResumeTitle(record: ResumeRecord) {
 
 export default function App() {
   const [activeSection, setActiveSection] =
-    useState<PrimarySection>('새 자소서');
+    useState<PrimarySection>('경험 아카이브');
   const [activeStep, setActiveStep] = useState<StepId>(1);
   const [session, setSession] = useState<AppSession | null>(null);
   const [csrfToken, setCsrfToken] = useState('');
@@ -606,7 +606,7 @@ export default function App() {
               onClick={addQuestion}
               className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-400"
             >
-              add
+              문항 추가
             </button>
           </div>
 
