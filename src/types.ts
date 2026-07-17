@@ -31,6 +31,7 @@ export type ResumeQuestion = {
   limit_type: ResumeLimitType;
   limit_value: number | null;
   answer_content: string;
+  company_info: string;
 };
 
 export type ResumeRecord = {
@@ -50,6 +51,7 @@ export type ResumePayloadQuestion = {
   limit_type: ResumeLimitType;
   limit_value: number | null;
   answer_content: string;
+  company_info: string;
 };
 
 export type ResumePayload = {

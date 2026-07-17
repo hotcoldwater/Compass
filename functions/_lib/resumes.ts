@@ -10,6 +10,7 @@ export type ResumeQuestionRow = {
   limit_type: 'chars' | 'bytes' | 'none';
   limit_value: number | null;
   answer_content: string;
+  company_info: string;
 };
 
 export type ResumeRow = {
@@ -32,6 +33,7 @@ export type ResumePayloadQuestion = {
   limit_type?: 'chars' | 'bytes' | 'none';
   limit_value?: number | null;
   answer_content?: string;
+  company_info?: string;
 };
 
 export type ResumePayload = {
@@ -97,6 +99,11 @@ export async function ensureResumeTables(env: Env) {
     CREATE INDEX IF NOT EXISTS idx_resume_questions_resume_id
     ON resume_questions (resume_id, sort_order, id)
   `;
+
+  await sql`
+    ALTER TABLE resume_questions
+    ADD COLUMN IF NOT EXISTS company_info TEXT NOT NULL DEFAULT ''
+  `;
 }
 
 function normalizeDate(value: string | undefined) {
@@ -132,6 +139,7 @@ function normalizeQuestion(question: ResumePayloadQuestion, index: number) {
     limit_type: limitType,
     limit_value: limitValue,
     answer_content: String(question.answer_content || ''),
+    company_info: String(question.company_info || '').trim(),
   };
 }
 
@@ -175,7 +183,8 @@ export async function loadResumeRecords(
       question_text,
       limit_type,
       limit_value,
-      answer_content
+      answer_content,
+      company_info
     FROM resume_questions
     WHERE resume_id IN (
       SELECT id
@@ -197,6 +206,7 @@ export async function loadResumeRecords(
       limit_type: question.limit_type,
       limit_value: question.limit_value,
       answer_content: question.answer_content,
+      company_info: question.company_info,
     });
     questionMap.set(question.resume_id, current);
   }
@@ -250,7 +260,8 @@ export async function createResumeRecord(
         question_text,
         limit_type,
         limit_value,
-        answer_content
+        answer_content,
+        company_info
       )
       VALUES (
         ${resume.id},
@@ -258,7 +269,8 @@ export async function createResumeRecord(
         ${question.question_text},
         ${question.limit_type},
         ${question.limit_value},
-        ${question.answer_content}
+        ${question.answer_content},
+        ${question.company_info}
       )
     `;
   }
@@ -320,7 +332,8 @@ export async function updateResumeRecord(
         question_text,
         limit_type,
         limit_value,
-        answer_content
+        answer_content,
+        company_info
       )
       VALUES (
         ${id},
@@ -328,7 +341,8 @@ export async function updateResumeRecord(
         ${question.question_text},
         ${question.limit_type},
         ${question.limit_value},
-        ${question.answer_content}
+        ${question.answer_content},
+        ${question.company_info}
       )
     `;
   }

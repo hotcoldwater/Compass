@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS resume_questions (
   limit_type TEXT NOT NULL DEFAULT 'none',
   limit_value INTEGER,
   answer_content TEXT NOT NULL DEFAULT '',
+  company_info TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT resume_questions_limit_type_check

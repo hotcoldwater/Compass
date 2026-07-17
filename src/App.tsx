@@ -59,6 +59,7 @@ type DraftQuestion = {
   limit_type: ResumeLimitType;
   limit_value: string;
   answer_content: string;
+  company_info: string;
 };
 
 type ResumeDraft = {
@@ -96,6 +97,7 @@ function createQuestion(seed = 0): DraftQuestion {
     limit_type: 'none',
     limit_value: '',
     answer_content: '',
+    company_info: '',
   };
 }
 
@@ -127,6 +129,7 @@ function mapRecordToDraft(record: ResumeRecord): ResumeDraft {
             limit_value:
               question.limit_value === null ? '' : String(question.limit_value),
             answer_content: question.answer_content,
+            company_info: question.company_info || '',
           }))
         : [createQuestion(0)],
   };
@@ -153,6 +156,7 @@ function buildResumePayload(draft: ResumeDraft): ResumePayload {
             ? null
             : Number(question.limit_value),
         answer_content: question.answer_content,
+        company_info: question.company_info,
       })),
   };
 }
@@ -677,9 +681,23 @@ export default function App() {
                     questionId={question.id}
                     disabled={!session?.user.id}
                   />
+                  <div className="mt-3">
+                    <label className="text-xs font-medium text-neutral-600">
+                      기업 정보 (인재상·정책·신년사 등, 선택)
+                    </label>
+                    <textarea
+                      className="mt-2 min-h-[80px] w-full resize-y rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-400"
+                      placeholder="지원동기 등 기업 연계형 문항에서 참고할 기업 정보를 붙여넣으세요."
+                      value={question.company_info}
+                      onChange={(event) =>
+                        updateQuestion(question.client_id, 'company_info', event.target.value)
+                      }
+                    />
+                  </div>
                   <AiAnswerGenerator
                     questionId={question.id}
                     disabled={!session?.user.id}
+                    companyInfo={question.company_info}
                     onApply={(answer) =>
                       updateQuestion(question.client_id, 'answer_content', answer)
                     }
