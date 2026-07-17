@@ -61,6 +61,7 @@ AI_MODEL=
 ```
 
 AI 호출이 실패하면 화면에 제공자 오류 상태와 메시지를 표시합니다. API 키·모델 ID·OpenAI API 사용 한도를 확인하세요.
+GPT-5 계열 모델은 `temperature` 값을 지원하지 않을 수 있으므로, Compass는 기본 설정으로 요청합니다.
 
 ## DB 설정
 
