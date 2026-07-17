@@ -160,8 +160,6 @@ function buildResumePayload(draft: ResumeDraft): ResumePayload {
 function hasCompleteBasicInfo(draft: ResumeDraft) {
   return (
     draft.company_name.trim() !== '' &&
-    draft.application_start_date.trim() !== '' &&
-    draft.application_end_date.trim() !== '' &&
     draft.job_field.trim() !== '' &&
     draft.questions.some((question) => question.question_text.trim() !== '')
   );
@@ -432,6 +430,9 @@ export default function App() {
   function renderResumeBasicInfo() {
     return (
       <div className="space-y-6 px-6 py-6 sm:px-8 sm:py-8">
+        <p className="text-sm text-neutral-500">
+          회사명, 지원 분야, 첫 문항만 입력하면 바로 작성할 수 있습니다.
+        </p>
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <label
@@ -468,27 +469,19 @@ export default function App() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="text-sm font-medium text-neutral-700">지원기간</div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <input
-              type="date"
-              className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 outline-none transition focus:border-neutral-400"
-              value={resumeDraft.application_start_date}
-              onChange={(event) =>
-                updateDraftField('application_start_date', event.target.value)
-              }
-            />
-            <input
-              type="date"
-              className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 outline-none transition focus:border-neutral-400"
-              value={resumeDraft.application_end_date}
-              onChange={(event) =>
-                updateDraftField('application_end_date', event.target.value)
-              }
-            />
+        <details className="rounded-2xl border border-neutral-200 bg-white p-4">
+          <summary className="cursor-pointer text-sm font-medium text-neutral-700">
+            지원 일정 추가하기 (선택)
+          </summary>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="text-sm text-neutral-600">시작일
+              <input type="date" className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 outline-none" value={resumeDraft.application_start_date} onChange={(event) => updateDraftField('application_start_date', event.target.value)} />
+            </label>
+            <label className="text-sm text-neutral-600">마감일
+              <input type="date" className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 outline-none" value={resumeDraft.application_end_date} onChange={(event) => updateDraftField('application_end_date', event.target.value)} />
+            </label>
           </div>
-        </div>
+        </details>
 
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-3">
