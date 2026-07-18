@@ -23,6 +23,7 @@
 - 경험카드 활용을 위한 지원 동기·직무 역량·문제 해결·협업·실패와 개선 문항 예시
 - 글자 수 또는 byte 제한을 포함한 자소서 저장·수정
 - 경험카드·자소서 모두 완전 삭제 가능 (경험은 상세 화면의 `삭제`, 자소서는 목록 카드의 `삭제`, 확인 후 즉시 삭제)
+- 파비콘(SVG + PNG 폴백/Apple 터치 아이콘)과 링크 공유 시 노출되는 Open Graph/Twitter 카드 이미지 적용
 
 ## 기술 스택
 
@@ -34,6 +35,10 @@
 - Cloudflare Pages
 - Cloudflare Pages Functions
 - Neon DB
+
+## 브랜드 자산
+
+`public/favicon.svg`, `public/favicon-16x16.png`, `public/favicon-32x32.png`, `public/apple-touch-icon.png`, `public/favicon-512.png`, `public/og-image.png`은 모두 기존 `compass-logo.svg` 아이콘과 동일한 디자인을 재사용합니다. PNG들은 별도 디자인 툴 없이 SVG를 렌더링해 캡처하는 방식으로 생성했으므로, 로고 디자인을 바꾸면 이 파일들도 함께 다시 만들어야 합니다.
 
 ## 로컬 실행
 
