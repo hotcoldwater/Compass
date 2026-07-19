@@ -123,6 +123,17 @@ export function AiAnalyzeExperience({
 
             {loading && !currentQuestion ? (
               <p className="text-sm text-neutral-500">질문을 준비하는 중...</p>
+            ) : error && !currentQuestion ? (
+              <div className="space-y-3">
+                <p className="text-sm text-red-700">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => void fetchNext(qaHistory)}
+                  className="rounded-lg bg-neutral-950 px-3 py-2 text-xs font-medium text-white"
+                >
+                  다시 시도
+                </button>
+              </div>
             ) : currentQuestion ? (
               <div className="space-y-3">
                 <p className="text-sm font-medium text-neutral-800">{currentQuestion}</p>
